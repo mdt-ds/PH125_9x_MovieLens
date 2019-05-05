@@ -221,7 +221,7 @@ rmse_results <- bind_rows(rmse_results,
 rmse_results %>% knitr::kable()
 
 # #uncomment if you can compute this part
-# #at least 16 GB RAM needed
+# #at least 32 GB RAM needed
 #
 # # adding latent factor contribution to the model ----
 # gc()

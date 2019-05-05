@@ -157,9 +157,18 @@ RMSE <- function(true_ratings, predicted_ratings){
 The model could be considered useful if the RMSE metric reach a value below the one reached with the null model based only on the overall mean `r mean(edx$rating)`.
 ```{r rmse_null, cache=TRUE}
 rmse_null <- RMSE(validation$rating, mean(edx$rating))
-print(rmse_null)
+rmse_results <- tibble(method = 'overall mean model', 
+                       RMSE = rmse_null)
+rmse_results %>% knitr::kable()
 ```
-The model will be constructed in 3 steps first modeling effects, then regularizing the model and finally adding the latent factor effect provided by the rating matrix factorization.
+
+The model will be constructed in 3 steps 
+
+- first modeling effects, 
+
+- then regularizing the model 
+
+- and finally adding the latent factor effect provided by the rating matrix factorization.
 
 ## Modeling effects
 First we build the simple additive model $r_{u,m}=\mu+b_m+b_u+b_y$ where 
@@ -199,7 +208,9 @@ predicted_real_ratings <- validation %>%
 
 # evaluating root mean squared error
 rmse_0 <- RMSE(true_ratings = validation$rating, predicted_ratings = predicted_real_ratings)
-rmse_results <- data.frame(method = 'movie + user + movie_year effects', RMSE = rmse_0)
+rmse_results <- bind_rows(rmse_results,
+                          tibble(method = 'movie + user + movie_year effects', 
+                                 RMSE = rmse_0))
 
 # remove objects to free memory
 rm(movie_effect, user_effect, year_effect, rmse_0)
@@ -276,7 +287,8 @@ predicted_real_ratings <- validation %>%
 # evaluating root mean squared rror
 rmse_1 <- RMSE(true_ratings = validation$rating, predicted_ratings = predicted_real_ratings)
 rmse_results <- bind_rows(rmse_results, 
-                          data.frame(method = 'movie + user + movie_year effects regularized', RMSE = rmse_1))
+                          tibble(method = 'movie + user + movie_year effects regularized', 
+                                 RMSE = rmse_1))
 
 # remove objects to free memory
 rm(movie_effect, user_effect, year_effect, lambdas, lambda_df)
@@ -305,7 +317,7 @@ if(!require(softImpute)) {
 um_matrix_sparse <- as(um_matrix, 'Incomplete')
 rm(um_matrix, user_movie); gc()
 ```
-The incomplete matrix object is now ready to be scaled by row (user) and column (movie) and factorized in 50 latent factor with 'als' algorithm. Note that lambda regularizing parameter has to be chosen so that the rank is 50 (It has been done through a parameter search but not reported in script for execution time constraint).
+The incomplete matrix object is now ready to be scaled by row (user) and column (movie) and factorized in 50 latent factors with 'als' algorithm. Note that lambda regularizing parameter has to be chosen so that the rank is 50 (It has been done through a parameter search but not reported in script for execution time constraint).
 ```{r factorization, cache=TRUE, message=FALSE, results='hide'}
 um_matrix_sparse_centered <- biScale(um_matrix_sparse, 
                                      col.scale=FALSE, row.scale=FALSE,
@@ -343,8 +355,9 @@ predicted_real_ratings_mf <- predicted_real_ratings + latent_factor_effect
 
 # evaluating root mean squared error
 rmse_2 <- RMSE(true_ratings = validation$rating, predicted_ratings = predicted_real_ratings_mf)
-rmse_results <- bind_rows(rmse_results, data.frame(method = 'matrix factorization',
-                                                   RMSE = rmse_2))
+rmse_results <- bind_rows(rmse_results, 
+                          tibble(method = 'matrix factorization', 
+                                 RMSE = rmse_2))
 ```
 
 
@@ -354,7 +367,7 @@ The following table showed the results achieved in the 3 steps of the additive m
 rmse_results %>% knitr::kable()
 ```
 
-The final RMSE is below the null model rmse , about`r round(rmse_null, 2)`, by `r round((1-(rmse_2/rmse_null)), 2) * 100`%  and also below the threshold set by HarvardX course Team to achieve 25 points.
+The final RMSE is below the null model rmse by `r round((1-(rmse_2/rmse_null)), 2) * 100`%  and also below the threshold set by HarvardX course Team to achieve 25 points.
 Every step in model building make the prediction better and better.
 
 # Conclusions
@@ -382,12 +395,15 @@ Furthermore we can explore the other algorithm for matrix completion of matrix p
 As far as script performance is concerned for sure there is room for improvement in recoding for loops: options are parallelizing for loop or use Rcpp function to speed up the execution.
 
 # Reproducibilty
+R script and rmarkdown file are available for review on public github repository: 
+
+![](images/GitHub-Mark-16px.png) https://github.com/mdt-ds/PH125_9x_MovieLens .
+
 R script is intended to be reproducible. All package loading is checked for package installation. Directoty are all indicated in relative fashion.
 Furthermore in order to facilitate reproducibility, HW and SW used for this project have been reported below.
-R script and rmarkdown file are available for review on public github repository: https://github.com/mdt-ds/PH125_9x_MovieLens .
 
 ## Computation
-Computation capacity is a critical point: enough RAM shall be provided in order to perform the creation of the rating matrix.
+Computation capacity is a critical point: enough RAM shall be provided in order to perform the creation of the rating matrix and successive elaborations.
 On a laptop with 8 cores and 8 GB of RAM the following error is displayed when starting the third modeling step while trying to create the user_movie matrix: *Error: cannot allocate vector of size 2.8 Gb*.
 For this reason I have commented out this part on the script in order to allow running the script without error if memory of your computer is not enough. The script commented out runs in about 10 minutes on my laptop.
 Also on a Linux EC2 instance r5.large (2 vCPU, 16 GB) a similar error is displayed.
@@ -416,4 +432,4 @@ DOI=http://dx.doi.org/10.1145/2827872
 
 ***
 \centering
-Report under  ![](images/cc-by-nc-sa.png)  license
+![](images/cc-by-nc-sa.png)
