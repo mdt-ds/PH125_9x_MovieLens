@@ -151,7 +151,7 @@ predicted_real_ratings <- validation %>%
 
 # evaluating root mean squared error
 rmse_0 <- RMSE(true_ratings = validation$rating, predicted_ratings = predicted_real_ratings)
-rmse_results <- data.frame(method = 'movie + user + movie_year effects', RMSE = rmse_0)
+rmse_results <- tibble(method = 'movie + user + movie_year effects', RMSE = rmse_0)
 rmse_results %>% knitr::kable()
 
 
@@ -217,7 +217,7 @@ predicted_real_ratings <- validation %>%
 # evaluating root mean squared rror
 rmse_1 <- RMSE(true_ratings = validation$rating, predicted_ratings = predicted_real_ratings)
 rmse_results <- bind_rows(rmse_results, 
-                          data.frame(method = 'movie + user + movie_year effects regularized', RMSE = rmse_1))
+                          tibble(method = 'movie + user + movie_year effects regularized', RMSE = rmse_1))
 rmse_results %>% knitr::kable()
 
 # #uncomment if you can compute this part
@@ -267,7 +267,7 @@ rmse_results %>% knitr::kable()
 # 
 # # evaluating root mean squared error
 # rmse_2 <- RMSE(true_ratings = validation$rating, predicted_ratings = predicted_real_ratings_mf)
-# rmse_results <- bind_rows(rmse_results, data.frame(method = 'matrix factorization',
+# rmse_results <- bind_rows(rmse_results, tibble(method = 'matrix factorization',
 #                                                    RMSE = rmse_2))
 # 
 # rmse_results %>% knitr::kable()
