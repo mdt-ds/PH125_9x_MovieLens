@@ -405,7 +405,7 @@ Furthermore in order to facilitate reproducibility, HW and SW used for this proj
 ## Computation
 Computation capacity is a critical point: enough RAM shall be provided in order to perform the creation of the rating matrix and successive elaborations.
 On a laptop with 8 cores and 8 GB of RAM the following error is displayed when starting the third modeling step while trying to create the user_movie matrix: *Error: cannot allocate vector of size 2.8 Gb*.
-For this reason I have commented out this part on the script in order to allow running the script without error if memory of computer is not enough. The script commented out runs in about 10 minutes on my laptop.
+For this reason I have commented out this part on the script in order to allow running the script without error if memory of computer is not enough. The script commented out ran in more than 30 minutes on my laptop.
 Also on a Linux EC2 instance r5.large (2 vCPU, 16 GB) a similar error is displayed.
 Finally on a r5.xlarge (4 vCPU, 32 GB) EC2 instance the code has been executed without any error in about 16 minutes.
 In order to knit this report I had to use more powerful EC2 instance (r5.2xlarge with 8 vCPUs and 64 GB).
