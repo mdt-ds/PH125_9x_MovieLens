@@ -1,6 +1,6 @@
 # Script Header ----
 # File-Name:      PH125_9_movielens_capstone_script_mdt.R
-# Date:           February 28, 2019                                   
+# Date:           May 9, 2019                                   
 # Author:         Mario De Toma <mdt.datascience@gmail.com>
 # Purpose:        R script for submission of PH125_9 movielens capstone project for
 #                 HarvardX Data Science Professional Certificate
@@ -10,7 +10,7 @@
 # This program is believed to be free of errors, but it comes with no guarantee! 
 # The user bears all responsibility for interpreting the results.
 
-# All source code is copyright (c) 2017, under the Simplified BSD License.  
+# All source code is copyright (c) 2019, under the Simplified BSD License.  
 # For more information on FreeBSD see: http://www.opensource.org/licenses/bsd-license.php
 
 # All images and materials produced by this code are licensed under the Creative Commons 
@@ -18,9 +18,6 @@
 
 # All rights reserved.
 
-# NOTE: If you are running this in the R console you must use the 'setwd' command to set the 
-# working directory for the console to whereever you have saved this file prior to running.
-# Otherwise you will see errors when loading data or saving figures!
 #############################################################################################
 
 
@@ -79,10 +76,6 @@ edx <- rbind(edx, removed)
 
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
-# # save objects (not in edx script)
-# if(!dir.exists('rds')) dir.create('rds')
-# saveRDS(edx, 'rds/edx.RDS')
-# saveRDS(validation, 'rds/validation.RDS')
 
 # exploratory data analysis ----
 # rating overall distribution
@@ -115,7 +108,7 @@ edx %>% filter(rating %in% c(0.5, 1.5, 2.5, 3.5, 4.5)) %>%
   summarise(half_rated = n()) %>% 
   arrange(half_rated)
 
-
+# modeling
 # main + group level efect model ----
 
 # evaluation of Reccomender through RMSE

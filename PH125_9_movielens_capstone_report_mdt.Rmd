@@ -1,7 +1,7 @@
 ---
 title: "PH125_9 MovieLens Capstone Project"
 author: "Mario De Toma"
-date: "February 28, 2019"
+date: "May 9, 2019"
 output: pdf_document
 geometry:
   - a4paper
@@ -38,7 +38,7 @@ Starting point for conducting this study is the recommender model decribed by Pr
 
 *Theory)* 
 Matrix factorization is the state-of-the-art solution for sparse data problem, although it has become widely known since Netflix Prize Challenge. Matrix factorization is simply a family of mathematical operations for matrices in linear algebra. To be specific, a matrix factorization is a factorization of a matrix into a product of matrices. In the case of collaborative filtering, matrix factorization algorithms work by decomposing the user-item interaction matrix into the product of two lower dimensionality rectangular matrices. One matrix can be seen as the user matrix where rows represent users and columns are latent factors. The other matrix is the item matrix where rows are latent factors and columns represent items.
-In the sparse user-item interaction matrix, the predicted rating user u will give item i is computed as: $$r_{ui}=\sum_{f=0}^{nfactors}h_{u,f} \cdot w_{f,i}$$ 
+In the sparse user-item interaction matrix, the predicted rating user u will give item i is computed as: $$r_{ui}=\sum_{f=1}^{nfactors}h_{u,f} \cdot w_{f,i}$$ 
 Rating of item $i$ given by user $u$ can be expressed as a dot product of the user latent vector and the item latent vector.
 
 ## Overview and outline
@@ -141,7 +141,7 @@ edx %>% filter(rating %in% c(0.5, 1.5, 2.5, 3.5, 4.5)) %>%
 ```
 
 ## Proposed model
-The proposed model should take into considaration the global mean $\mu$ effect, the group level effects for movie, user and movie year and will add the latent factor effect.
+The proposed model take into considaration the global mean $\mu$ effect, the group level effects for movie, user and movie year and finally add the latent factor effect for residuals obtained through matrix factorization.
 $$r_{u,m}=\mu+b_m+b_u+b_y+\sum_{n=1}^{nfactors}h_{u,f} \cdot w_{f,m} +\epsilon$$
 with nfactors = 50.
 
@@ -154,7 +154,7 @@ RMSE <- function(true_ratings, predicted_ratings){
   sqrt(mean((true_ratings - predicted_ratings)^2))
 }
 ```
-The model could be considered useful if the RMSE metric reach a value below the one reached with the null model based only on the overall mean `r mean(edx$rating)`.
+The model can be considered useful if the RMSE metric reach a value below the one reached with the null model based only on the overall mean `r mean(edx$rating)`.
 ```{r rmse_null, cache=TRUE}
 rmse_null <- RMSE(validation$rating, mean(edx$rating))
 rmse_results <- tibble(method = 'overall mean model', 
@@ -168,7 +168,7 @@ The model will be constructed in 3 steps
 
 - then regularizing the model 
 
-- and finally adding the latent factor effect provided by the rating matrix factorization.
+- and finally adding the latent factor residual effect obtained through matrix factorization of the rating matrix.
 
 ## Modeling effects
 First we build the simple additive model $r_{u,m}=\mu+b_m+b_u+b_y$ where 
@@ -258,7 +258,7 @@ lambda_best <- lambda_df$lambda[which.min(lambda_df$rmse)]
 ggplot(lambda_df, aes(x = lambda, y = rmse)) + geom_point()
 
 ```
-The best $\lambda$ is equal to `r lambda_best` and it can be so used to produce predictione and evaluating the model.
+The best $\lambda$ is equal to `r lambda_best` and it can be so used to predict ratings and to evaluate the model.
 ```{r regularized model, message=FALSE, warning=FALSE, cache=TRUE, results='hide'}
 l <- lambda_best
 mu <- mean(edx$rating)
@@ -308,7 +308,7 @@ um_matrix <- as.matrix(user_movie)
 ```
 The rating matrix created is full of NA.
 Matrix factorization PCA or SVD algorithm needs complete matrix and cannot be used with sparse matrix. 
-softImpute implements an alternate least square algorithm that allow the factorization also in presence of a matrix with high rate of sparsity.
+softImpute package implements an alternate least square algorithm that allow the factorization also in presence of a matrix with high rate of sparsity.
 ```{r incomplete, echo=TRUE, cache=TRUE, message=FALSE, results='hide'}
 if(!require(softImpute)) {
   install.packages("softImpute", repos = "http://cran.us.r-project.org")
@@ -317,7 +317,8 @@ if(!require(softImpute)) {
 um_matrix_sparse <- as(um_matrix, 'Incomplete')
 rm(um_matrix, user_movie); gc()
 ```
-The incomplete matrix object is now ready to be scaled by row (user) and column (movie) and factorized in 50 latent factors with 'als' algorithm. Note that lambda regularizing parameter has to be chosen so that the rank is 50 (It has been done through a parameter search but not reported in script for execution time constraint).
+The incomplete matrix object is now ready to be scaled by row (user) and column (movie) so that we can get residual effect. Then the matrix is factorized in 50 latent factors with 'als' algorithm. 
+Note that lambda regularizing parameter of the algorithm has to be chosen so that the rank is 50 (It has been done through a parameter grid search but not reported in script for execution time constraint).
 ```{r factorization, cache=TRUE, message=FALSE, results='hide'}
 um_matrix_sparse_centered <- biScale(um_matrix_sparse, 
                                      col.scale=FALSE, row.scale=FALSE,
@@ -327,8 +328,8 @@ rating_fits <- softImpute(um_matrix_sparse_centered, type = "als",
                           trace=TRUE)
 rating_fits$d
 ```
-Note that lambda regularizing parameter has to be chosen so that the rank is 50.
-It is now possible to recontruct the matrix for validaion observation.
+
+It is now possible to recontruct the matrix for validation observations.
 ```{r imputation, cache=TRUE, message=FALSE, results='hide'}
 idx_user <- numeric(length = nrow(validation))
 idx_movie <- numeric(length = nrow(validation))
@@ -347,7 +348,7 @@ rm(um_matrix_sparse, um_matrix_sparse_centered, idx_movie, idx_user)
 gc()
 ```
 
-Finally we add the effect calculated with matrix factorization to the previous regularized model.
+Finally we add the residual effect calculated with matrix factorization to the previous regularized model.
 ```{r prediction, cache=TRUE, warning=FALSE}
 # predict real ratings adding latent factor effect
 predicted_real_ratings_mf <- predicted_real_ratings + latent_factor_effect
@@ -367,8 +368,8 @@ The following table showed the results achieved in the 3 steps of the additive m
 rmse_results %>% knitr::kable()
 ```
 
-The final RMSE is below the null model rmse by `r round((1-(rmse_2/rmse_null)), 2) * 100`%  and also below the threshold set by HarvardX course Team to achieve 25 points.
-Every step in model building make the prediction better and better.
+The final RMSE is below the null model rmse by `r round((1-(rmse_2/rmse_null)), 2) * 100`%  and also below the threshold set by HarvardX course Team to achieve 25 points (0.87550).
+Every step in model building make the predictions better and better.
 
 # Conclusions
 Interpreting the results, it is possible to say therefore that using this model on average the user rating for a specific movie can be far from the actual rating by `r rmse_2`. 
@@ -384,15 +385,14 @@ Results can be considered valid because of this 3 main reasons:
 
 
 This project helped me in understanding the data science research methodology and the expert use of statistical computation tool.
-Furthermore make me recall my former study in linear algebra as a student of electrical engineer years ago and understanding its application in the context of data science.
-
+Furthermore make me recall my former study (years ago) in linear algebra as a student of electrical engineer and understanding its application in the context of data science.
 
 
 ## Model improvements
 Future research should look at introducing more time effects with respect with timestamp variable not taken into account in this study.
 It should be interesting also evaluate the prediction score increasing by the number of latent factors (maybe up to 100). This should be done through validation.
-Furthermore we can explore the other algorithm for matrix completion of matrix provided by the softImpute package.
-As far as script performance is concerned for sure there is room for improvement in recoding for loops: options are parallelizing for loop or use Rcpp function to speed up the execution.
+Furthermore the other algorithm for matrix completion of matrix provided by the softImpute package  can be explored.
+As far as script performance is concerned for sure there is room for improvement in recoding for loops: options include parallelizing for loop or use Rcpp package to speed up the execution.
 
 # Reproducibilty
 R script and rmarkdown file are available for review on public github repository: 
@@ -405,7 +405,7 @@ Furthermore in order to facilitate reproducibility, HW and SW used for this proj
 ## Computation
 Computation capacity is a critical point: enough RAM shall be provided in order to perform the creation of the rating matrix and successive elaborations.
 On a laptop with 8 cores and 8 GB of RAM the following error is displayed when starting the third modeling step while trying to create the user_movie matrix: *Error: cannot allocate vector of size 2.8 Gb*.
-For this reason I have commented out this part on the script in order to allow running the script without error if memory of your computer is not enough. The script commented out runs in about 10 minutes on my laptop.
+For this reason I have commented out this part on the script in order to allow running the script without error if memory of computer is not enough. The script commented out runs in about 10 minutes on my laptop.
 Also on a Linux EC2 instance r5.large (2 vCPU, 16 GB) a similar error is displayed.
 Finally on a r5.xlarge (4 vCPU, 32 GB) EC2 instance the code has been executed without any error in about 16 minutes.
 In order to knit this report I had to use more powerful EC2 instance (r5.2xlarge with 8 vCPUs and 64 GB).
@@ -424,7 +424,7 @@ sessionInfo()
 [1] F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4, Article 19 (December 2015), 19 pages. 
 DOI=http://dx.doi.org/10.1145/2827872
 
-[2] Rafael Irizarry (2018). Introduction to Data Science. Data Analysis and Prediction Algorithms with R. Chapters 71, 72 and 73 https://rafalab.github.io/dsbook/
+[2] Rafael Irizarry (2018). Introduction to Data Science. Data Analysis and Prediction Algorithms with R. Chapters 34.7, 34.9 and 34.11 https://rafalab.github.io/dsbook/
 
 [3] Edwin Chen (2011) Winning the Netflix Prize: A Summary. http://blog.echen.me/2011/10/24/winning-the-netflix-prize-a-summary/
 
