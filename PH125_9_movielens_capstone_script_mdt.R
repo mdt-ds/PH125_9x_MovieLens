@@ -1,11 +1,11 @@
 # Script Header ----
 # File-Name:      PH125_9_movielens_capstone_script_mdt.R
-# Date:           May 9, 2019                                   
+# Date:           May 10, 2019                                   
 # Author:         Mario De Toma <mdt.datascience@gmail.com>
 # Purpose:        R script for submission of PH125_9 movielens capstone project for
 #                 HarvardX Data Science Professional Certificate
-# Data Used:      MovieLens 10M dataset   
-# Packages Used:  dplyr, tidyr, softImpute   
+# Data used:      MovieLens 10M dataset   
+# Packages used:  dplyr, tidyr, ggplot2, softImpute   
 
 # This program is believed to be free of errors, but it comes with no guarantee! 
 # The user bears all responsibility for interpreting the results.

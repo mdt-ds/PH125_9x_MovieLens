@@ -1,7 +1,7 @@
 ---
 title: "PH125_9 MovieLens Capstone Project"
 author: "Mario De Toma"
-date: "May 9, 2019"
+date: "May 10, 2019"
 output: pdf_document
 geometry:
   - a4paper
@@ -42,9 +42,9 @@ In the sparse user-item interaction matrix, the predicted rating user u will giv
 Rating of item $i$ given by user $u$ can be expressed as a dot product of the user latent vector and the item latent vector.
 
 ## Overview and outline
-The study demonstrates that using matrix factorization reduces the error measured with RMSE consistently. The study will be conducted in 3 different stages by modeling the group level effects of user, movie and movie year, then regularizing the parameters of this simple model and at last adding the latent factor component.
+This study demonstrated that using matrix factorization reduces significantly the error measured with RMSE. This study has been conducted in 3 different steps by modeling the group level effects of user, movie and movie year, then regularizing the parameters of this simple model and at last adding the residual effect calculated through matrix factorization.
 
-This report is articulated in the following few sections:
+This report is articulated in the following sections:
 
 - *Methods and Analysis*: where the Movielns dataset has been explored in order to find some insight, then the model has been proposed and the design of the study explained. Finally the modeling will be described in details.
 
@@ -117,7 +117,7 @@ The overall ratings discrete distribution shows that half points are relativly l
 edx %>% group_by(rating) %>% summarise(prop = n()/nrow(edx)) %>% 
   ggplot(aes(rating, prop)) + geom_col()
 ```
-According to recommender system literature we expect that user preference and movie overall quality influence the ratings.
+According to recommender system literature it is expected that user preference and movie overall quality influence the ratings.
 In order to investigate if any time effect could have any impact, the trend of rating mean along movie year can be explored.
 ```{r rating by movie year, fig.align='center'}
 edx %>%  
@@ -141,14 +141,13 @@ edx %>% filter(rating %in% c(0.5, 1.5, 2.5, 3.5, 4.5)) %>%
 ```
 
 ## Proposed model
-The proposed model take into considaration the global mean $\mu$ effect, the group level effects for movie, user and movie year and finally add the latent factor effect for residuals obtained through matrix factorization.
+The proposed model take into consideration the global mean $\mu$ effect, the group level effects for movie, user and movie year and finally add the latent factor effect for residuals obtained through matrix factorization.
 $$r_{u,m}=\mu+b_m+b_u+b_y+\sum_{n=1}^{nfactors}h_{u,f} \cdot w_{f,m} +\epsilon$$
 with nfactors = 50.
 
 ## Study design
-The study design foresees to train the model in edx dataset and to assess results on the validation set. Validation set is only the 10% of the data but it counts as much as `r nrow(validation)` observations.
-The prediction results will be measured by Root Mean Sqare Error (RMSE). 
-Recall that better the model lower the RMSE.
+The study design foresees to train the model on the edx dataset and to assess results on the validation set. Validation set is only the 10% of the data but it counts as much as `r nrow(validation)` observations.
+The prediction results will be measured by Root Mean Sqare Error (RMSE): better the model lower the RMSE.
 ```{r RMSE, echo=TRUE}
 RMSE <- function(true_ratings, predicted_ratings){
   sqrt(mean((true_ratings - predicted_ratings)^2))
@@ -162,16 +161,16 @@ rmse_results <- tibble(method = 'overall mean model',
 rmse_results %>% knitr::kable()
 ```
 
-The model will be constructed in 3 steps 
+The model has been constructed in 3 steps 
 
-- first modeling effects, 
+- first modeling group level effects, 
 
 - then regularizing the model 
 
-- and finally adding the latent factor residual effect obtained through matrix factorization of the rating matrix.
+- and finally adding the residual effect obtained through matrix factorization of the rating matrix.
 
 ## Modeling effects
-First we build the simple additive model $r_{u,m}=\mu+b_m+b_u+b_y$ where 
+Firstly the simple additive model $r_{u,m}=\mu+b_m+b_u+b_y$  has been built where 
 
 - $\mu$ is the overall mean
 
@@ -219,7 +218,7 @@ gc()
 
 
 ## Regularizing effect model
-Minimizing ridge regression objective function, it is demonstrated the every effect parameter can be calculated (eg for movie effect) as 
+Minimizing the ridge regression objective function it is possible to demonstrate that every effect parameter can be calculated (eg for movie effect) as:
 $$\hat{b_m}(\lambda) = \frac{1}{\lambda + n_m}\sum_u^{n_m}(Y_{u,m} -\hat{\mu})$$
 where $\lambda$ is a tuning parameter to be found through validation.
 ```{r regularization, cache=TRUE}
@@ -258,7 +257,7 @@ lambda_best <- lambda_df$lambda[which.min(lambda_df$rmse)]
 ggplot(lambda_df, aes(x = lambda, y = rmse)) + geom_point()
 
 ```
-The best $\lambda$ is equal to `r lambda_best` and it can be so used to predict ratings and to evaluate the model.
+The best $\lambda$ is equal to `r lambda_best` and it has been used to predict ratings and to evaluate the model at step 2.
 ```{r regularized model, message=FALSE, warning=FALSE, cache=TRUE, results='hide'}
 l <- lambda_best
 mu <- mean(edx$rating)
@@ -296,8 +295,8 @@ gc()
 ```
 
 
-## Modeling latent factor reconstruction
-In order to apply matrix factorization modeling, the rating matrix is created using the spread() function from tidyr package.
+## Modeling residual effect through matrix factorization
+In order to apply matrix factorization modeling, the rating matrix has been created using the spread() function from tidyr package.
 ```{r rating matrix, cache.lazy = FALSE, cache=TRUE}
 user_movie <- edx %>% select(userId, movieId, rating) %>% 
   spread(key = movieId, value = rating)
@@ -317,8 +316,9 @@ if(!require(softImpute)) {
 um_matrix_sparse <- as(um_matrix, 'Incomplete')
 rm(um_matrix, user_movie); gc()
 ```
-The incomplete matrix object is now ready to be scaled by row (user) and column (movie) so that we can get residual effect. Then the matrix is factorized in 50 latent factors with 'als' algorithm. 
-Note that lambda regularizing parameter of the algorithm has to be chosen so that the rank is 50 (It has been done through a parameter grid search but not reported in script for execution time constraint).
+The incomplete matrix object has been then centered (and not scaled) by row (user effect) and column (movie effect) so that matrix for residual effect is produced. 
+Then the matrix for residual effect has been factorized in 50 latent factors with 'als' (alternative least square) algorithm. 
+Note that lambda regularizing parameter of the algorithm has been chosen so that the rank of the matrix is 50 (It has been done through a parameter grid search but not reported in script for execution time constraint).
 ```{r factorization, cache=TRUE, message=FALSE, results='hide'}
 um_matrix_sparse_centered <- biScale(um_matrix_sparse, 
                                      col.scale=FALSE, row.scale=FALSE,
@@ -329,7 +329,7 @@ rating_fits <- softImpute(um_matrix_sparse_centered, type = "als",
 rating_fits$d
 ```
 
-It is now possible to recontruct the matrix for validation observations.
+Then the latent factor effect for residuals of the validation observations has been calculated through the impute function of softImpute package.
 ```{r imputation, cache=TRUE, message=FALSE, results='hide'}
 idx_user <- numeric(length = nrow(validation))
 idx_movie <- numeric(length = nrow(validation))
@@ -348,7 +348,7 @@ rm(um_matrix_sparse, um_matrix_sparse_centered, idx_movie, idx_user)
 gc()
 ```
 
-Finally we add the residual effect calculated with matrix factorization to the previous regularized model.
+Finally the residual effect calculated with matrix factorization is added to the previous regularized model predictions.
 ```{r prediction, cache=TRUE, warning=FALSE}
 # predict real ratings adding latent factor effect
 predicted_real_ratings_mf <- predicted_real_ratings + latent_factor_effect
@@ -369,7 +369,7 @@ rmse_results %>% knitr::kable()
 ```
 
 The final RMSE is below the null model rmse by `r round((1-(rmse_2/rmse_null)), 2) * 100`%  and also below the threshold set by HarvardX course Team to achieve 25 points (0.87550).
-Every step in model building make the predictions better and better.
+Every step in model building makes the predictions better and better.
 
 # Conclusions
 Interpreting the results, it is possible to say therefore that using this model on average the user rating for a specific movie can be far from the actual rating by `r rmse_2`. 
@@ -385,13 +385,13 @@ Results can be considered valid because of this 3 main reasons:
 
 
 This project helped me in understanding the data science research methodology and the expert use of statistical computation tool.
-Furthermore make me recall my former study (years ago) in linear algebra as a student of electrical engineer and understanding its application in the context of data science.
+Furthermore made me recall my former study (years ago) in linear algebra as a student of electrical engineer understanding its application in the context of data science.
 
 
 ## Model improvements
 Future research should look at introducing more time effects with respect with timestamp variable not taken into account in this study.
 It should be interesting also evaluate the prediction score increasing by the number of latent factors (maybe up to 100). This should be done through validation.
-Furthermore the other algorithm for matrix completion of matrix provided by the softImpute package  can be explored.
+Furthermore the other algorithm for matrix completion, namely iterative soft-thresholded svd, provided by the softImpute package  can be explored.
 As far as script performance is concerned for sure there is room for improvement in recoding for loops: options include parallelizing for loop or use Rcpp package to speed up the execution.
 
 # Reproducibilty
@@ -403,7 +403,7 @@ R script is intended to be reproducible. All package loading is checked for pack
 Furthermore in order to facilitate reproducibility, HW and SW used for this project have been reported below.
 
 ## Computation
-Computation capacity is a critical point: enough RAM shall be provided in order to perform the creation of the rating matrix and successive elaborations.
+Computation capacity is a critical issue: enough RAM shall be provided in order to perform the creation of the rating matrix and successive elaborations for modeling step 3.
 On a laptop with 8 cores and 8 GB of RAM the following error is displayed when starting the third modeling step while trying to create the user_movie matrix: *Error: cannot allocate vector of size 2.8 Gb*.
 For this reason I have commented out this part on the script in order to allow running the script without error if memory of computer is not enough. The script commented out ran in more than 30 minutes on my laptop.
 Also on a Linux EC2 instance r5.large (2 vCPU, 16 GB) a similar error is displayed.
